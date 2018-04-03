@@ -1,0 +1,4 @@
+---
+# handlers file for role-nginx-configuration
+- name: Reload nginx
+  command: "{{nginx_command_to_reload}}"

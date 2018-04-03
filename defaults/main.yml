@@ -1,0 +1,6 @@
+---
+# defaults file for role-nginx-configuration
+nginx_config_src:
+nginx_config_dest: /etc/nginx/conf.d/nginx.conf
+nginx_command_to_check_config: nginx -t
+nginx_command_to_reload: service nginx reload

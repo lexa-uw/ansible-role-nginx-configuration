@@ -1,0 +1,62 @@
+---
+# tasks file for role-nginx-configuration
+
+- name: Set nginx config
+  register: nginx_config
+  template:
+    src: "{{nginx_config_src}}"
+    dest: "{{nginx_config_dest}}"
+    backup: yes
+  tags: [config, nginx]
+
+- name: Check nginx config and reload if it is correct
+  command: "{{nginx_command_to_check_config}}"
+  ignore_errors: yes
+  no_log: True
+  register: nginx_config_check
+  notify:
+    - Reload nginx
+  when:
+    - nginx_config.changed
+  tags: [config, nginx]
+
+- meta: flush_handlers
+
+- name: Restore from backup if exists
+  changed_when: False
+  copy:
+    src: "{{nginx_config.backup_file}}"
+    dest: "{{nginx_config.dest}}"
+    remote_src: yes
+  when:
+    - nginx_config.changed
+    - nginx_config_check.failed
+    - nginx_config.backup_file is defined
+
+- name: Remove backup file if exists
+  changed_when: False
+  file:
+    path: "{{nginx_config.backup_file}}"
+    state: absent
+  when:
+    - nginx_config.changed
+    - nginx_config_check.failed
+    - nginx_config.backup_file is defined
+
+- name: Remove nginx dest config if backup not exists
+  changed_when: False
+  file:
+    path: "{{nginx_config.dest}}"
+    state: absent
+  when:
+    - nginx_config.changed
+    - nginx_config_check.failed
+    - nginx_config.backup_file is not defined
+
+- fail:
+    msg: |
+      "Nginx config {{nginx_config.dest}} is incorrect:"
+      " {{nginx_config_check.stderr}}"
+  when:
+    - nginx_config.changed
+    - nginx_config_check.failed
